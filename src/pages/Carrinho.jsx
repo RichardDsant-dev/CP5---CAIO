@@ -1,7 +1,13 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import SugestaoItem from '../components/SugestaoItem'
-import { agruparItens, calcularTotal } from '../utils/carrinho'
+import {
+  agruparItens,
+  calcularRestanteParaFreteGratis,
+  calcularTotal,
+  produtoTemPrecoValido,
+  temFreteGratis,
+} from '../utils/carrinho'
 import { validarCupom } from '../utils/cupons'
 import { formatarPreco } from '../utils/formatarPreco'
 
@@ -13,9 +19,15 @@ export default function Carrinho({ carrinho, produtos, clienteAtual, onAdicionar
   const itens = agruparItens(carrinho)
   const total = calcularTotal(carrinho)
   const totalComDesconto = cupomAplicado ? total * (1 - cupomAplicado.desconto) : total
+  const restanteFrete = calcularRestanteParaFreteGratis(totalComDesconto)
 
   const sugestoes = produtos
-    .filter((produto) => !carrinho.find((item) => item.id === produto.id))
+    .filter(
+      (produto) =>
+        produtoTemPrecoValido(produto) &&
+        produto.estoque > 0 &&
+        !carrinho.find((item) => item.id === produto.id)
+    )
     .slice(0, 3)
 
   function aplicarCupom(evento) {
@@ -58,7 +70,7 @@ export default function Carrinho({ carrinho, produtos, clienteAtual, onAdicionar
               </div>
               <div className="item-info">
                 <p className="item-titulo">{item.produto.title}</p>
-                <p className="item-preco">R$ {item.produto.price}</p>
+                <p className="item-preco">{formatarPreco(item.produto.price)}</p>
               </div>
               <span className="item-quantidade">{item.quantidade} un.</span>
               <button className="botao-texto" onClick={() => onRemover(item.produto.id)}>
@@ -91,6 +103,18 @@ export default function Carrinho({ carrinho, produtos, clienteAtual, onAdicionar
             <p className="resumo-linha">
               <span>Desconto</span>
               <span>{cupomAplicado.desconto * 100}%</span>
+            </p>
+          )}
+          {!temFreteGratis(totalComDesconto) && (
+            <p className="resumo-linha">
+              <span>Frete</span>
+              <span>Faltam {formatarPreco(restanteFrete)} para frete grátis</span>
+            </p>
+          )}
+          {temFreteGratis(totalComDesconto) && (
+            <p className="resumo-linha">
+              <span>Frete</span>
+              <span>Frete grátis</span>
             </p>
           )}
           <p className="total">

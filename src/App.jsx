@@ -9,6 +9,7 @@ import Carrinho from './pages/Carrinho'
 import Estoque from './pages/Estoque'
 import { buscarProdutos } from './services/produtos'
 import { buscarClientes } from './services/clientes'
+import { produtoTemPrecoValido } from './utils/carrinho'
 
 export default function App() {
   const [produtos, setProdutos] = useState([])
@@ -17,6 +18,7 @@ export default function App() {
   const [carrinho, setCarrinho] = useState([])
   const [clientes, setClientes] = useState([])
   const [clienteAtualId, setClienteAtualId] = useState(null)
+  const [listaEspera, setListaEspera] = useState([])
 
   useEffect(() => {
     buscarProdutos()
@@ -31,7 +33,23 @@ export default function App() {
   }, [])
 
   function adicionarAoCarrinho(produto) {
-    setCarrinho(carrinho.concat(produto))
+    if (!produto || !produtoTemPrecoValido(produto) || produto.estoque === 0) {
+      return
+    }
+
+    setCarrinho((atual) => atual.concat(produto))
+  }
+
+  function registrarEspera({ produtoId, nome, email }) {
+    setListaEspera((atual) => [
+      ...atual,
+      {
+        id: `${produtoId}-${Date.now()}`,
+        produtoId,
+        nome,
+        email,
+      },
+    ])
   }
 
   function removerUmaUnidade(produtoId) {
@@ -67,7 +85,13 @@ export default function App() {
             />
             <Route
               path="/produto/:id"
-              element={<PaginaProduto produtos={produtos} onAdicionar={adicionarAoCarrinho} />}
+              element={
+                <PaginaProduto
+                  produtos={produtos}
+                  onAdicionar={adicionarAoCarrinho}
+                  onRegistrarEspera={registrarEspera}
+                />
+              }
             />
             <Route
               path="/carrinho"
@@ -81,7 +105,10 @@ export default function App() {
                 />
               }
             />
-            <Route path="/estoque" element={<Estoque produtos={produtos} />} />
+            <Route
+              path="/estoque"
+              element={<Estoque produtos={produtos} listaEspera={listaEspera} />}
+            />
           </Routes>
         )}
       </main>
